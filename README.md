@@ -39,11 +39,8 @@ git clone https://github.com/songyu-Ren/Crypto-Market-Microstructure.git
 cd Crypto-Market-Microstructure
 
 # Create virtual environment and install
-make install-dev
-
-# Or manually
 python3.11 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
