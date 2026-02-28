@@ -11,20 +11,23 @@ A production-quality Python 3.11 research repository for crypto market microstru
 This repository provides a complete framework for researching cryptocurrency market making strategies with a focus on:
 
 - **Market Microstructure**: Order book dynamics, flow imbalance, volatility estimation
-- **Backtesting**: Event-driven simulation with realistic fill models
-- **Risk Management**: Inventory skew, drawdown control, regime analysis
-- **Research Rigor**: Leakage prevention, walk-forward validation, stability checks
+- **Realistic Execution**: Queue-based fill models, partial fills, latency simulation
+- **Backtesting**: Event-driven simulation with multiple execution models
+- **Risk Management**: Kill switches, position limits, drawdown controls
+- **Research Rigor**: Leakage prevention, walk-forward validation, experiment management
 
 ### Key Features
 
 | Feature | Description |
 |---------|-------------|
-| 🎲 **Synthetic Data** | Deterministic L2 order book + trade generator for offline research |
-| 📊 **Feature Engineering** | Microprice, OFI, depth imbalance, realized volatility (no lookahead) |
-| ⚡ **Event-Driven Engine** | Realistic fill model with maker/taker fees |
-| 📈 **Strategy Framework** | Baseline MM with inventory skew + vol-adaptive spreads |
-| 🛡️ **Leakage Control** | Timestamp discipline, walk-forward splits, regime analysis |
-| 🧪 **Well Tested** | 80+ unit and integration tests |
+| 🎲 **Synthetic Data** | Deterministic L2 order book + trade generator |
+| 📊 **Feature Engineering** | Microprice, OFI, imbalance, volatility (no lookahead) |
+| ⚡ **Execution Models** | Naive and Queue-based with realistic fill dynamics |
+| 🌐 **Latency Simulation** | Event time vs arrival time, jitter, out-of-order handling |
+| 🧪 **Experiment Runner** | Batch parameter sweeps with automated reporting |
+| 🛡️ **Risk Management** | Kill switches, position limits, drawdown controls |
+| 📈 **Adapters** | CSV/Parquet loaders for real exchange data |
+| 🧪 **Well Tested** | 50+ unit and integration tests |
 
 ## 🚀 Quick Start
 
@@ -40,8 +43,14 @@ make install-dev
 
 # Or manually
 python3.11 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -e ".[dev]"
+```
+
+### Run Tests
+
+```bash
+make test
 ```
 
 ### Run Demo Backtest
@@ -52,31 +61,12 @@ python -m crypto_mm_research.cli.run_backtest \
     --output-dir outputs
 ```
 
-Sample output:
-```
-============================================================
-BACKTEST RESULTS SUMMARY
-============================================================
+### Run Experiments Grid
 
---- PnL Metrics ---
-Total PnL:              $125.43
-Realized PnL:           $98.21
-Unrealized PnL:         $27.22
-Total Return:           0.125%
-
---- Trade Metrics ---
-Number of Fills:        156
-Avg Trade Size:         0.1000
-Total Volume:           15.6000
-
---- Risk Metrics ---
-Sharpe Ratio:           1.234
-Max Drawdown:           0.089%
-Volatility (annual):    0.2341
-
---- Inventory Metrics ---
-Avg Inventory:          0.0234
-Max Inventory:          0.4500
+```bash
+python -m crypto_mm_research.cli.run_experiments \
+    --config configs/experiments_grid.yaml \
+    --output-dir outputs
 ```
 
 ### Run Research Notebooks
@@ -93,123 +83,122 @@ python notebooks/02_market_making_backtest_demo.py
 
 ```
 crypto_mm_research/
-├── crypto_mm_research/          # Main package
-│   ├── data/                    # Data models and loaders
-│   │   ├── events.py            # L2BookSnapshotEvent, TradeEvent
-│   │   ├── synthetic.py         # SyntheticDataGenerator
-│   │   └── loader.py            # CSV/Parquet data loaders
-│   ├── features/                # Feature engineering
-│   │   ├── microstructure.py    # Microstructure features
-│   │   └── builder.py           # FeatureBuilder (sequential)
-│   ├── backtest/                # Backtest engine
-│   │   ├── engine.py            # Event-driven backtester
-│   │   ├── strategy.py          # Strategy interface
-│   │   ├── account.py           # PnL accounting
-│   │   └── metrics.py           # Performance metrics
-│   ├── evaluation/              # Evaluation utilities
-│   │   ├── leakage.py           # Lookahead prevention
-│   │   └── stability.py         # Walk-forward, regimes
-│   └── cli/                     # Command-line interface
-│       └── run_backtest.py
-├── configs/                     # YAML configurations
-├── notebooks/                   # Research notebooks (.py)
-├── tests/                       # Test suite (80+ tests)
-├── docs/                        # Documentation
-├── Makefile                     # Build automation
-└── pyproject.toml               # Package configuration
+├── crypto_mm_research/
+│   ├── adapters/           # Exchange data adapters
+│   ├── backtest/           # Backtest engine
+│   ├── data/               # Data models and generators
+│   ├── evaluation/         # Leakage control, stability
+│   ├── execution/          # Execution models (Naive, Queue)
+│   ├── experiments/        # Batch experiment runner
+│   ├── features/           # Feature engineering
+│   ├── labels/             # Label construction, alignment
+│   ├── risk/               # Risk management, kill switches
+│   └── cli/                # Command-line interfaces
+├── configs/                # YAML configurations
+├── data/examples/          # Sample data files
+├── notebooks/              # Research notebooks (.py)
+├── tests/                  # Test suite (50+ tests)
+├── docs/                   # Documentation
+├── Makefile
+└── pyproject.toml
 ```
 
 ## 🔬 Core Components
 
-### 1. Data Model
+### Execution Models
 
 ```python
-from crypto_mm_research.data.events import L2BookSnapshotEvent, TradeEvent
-from crypto_mm_research.data.synthetic import SyntheticDataGenerator
+from crypto_mm_research.execution import QueueExecutionModel
 
-# Generate deterministic synthetic data
-gen = SyntheticDataGenerator(
-    symbol="BTC-USDT",
-    start_price=50000.0,
-    volatility_annual=0.8,
-    random_seed=42
+# Queue-based execution with realistic fill dynamics
+execution_model = QueueExecutionModel(
+    tick_size=0.1,
+    lot_size=0.001,
+    queue_ahead_ratio=0.5,  # Conservative queue position
+    allow_partial_fills=True,
+    trade_through_enabled=True,
 )
-events = gen.generate_to_list(duration_seconds=3600, events_per_second=10)
 ```
 
-### 2. Feature Engineering
+### Latency Simulation
 
 ```python
-from crypto_mm_research.features.builder import FeatureBuilder
+from crypto_mm_research.execution.latency import LatencyModel, ArrivalTimeGenerator
 
-# Build features sequentially (no lookahead)
-builder = FeatureBuilder(symbol="BTC-USDT", window_seconds=20.0)
-features_df = builder.process_events(events)
-
-# Available features:
-# - mid_price, microprice, spread_bps
-# - book_imbalance, depth_imbalance_5
-# - ofi (order flow imbalance)
-# - realized_vol_20, zscore_mid_20
-```
-
-### 3. Backtest Engine
-
-```python
-from crypto_mm_research.backtest.engine import BacktestEngine, BacktestConfig
-from crypto_mm_research.backtest.strategy import MarketMakingStrategy
-
-# Configure strategy
-strategy = MarketMakingStrategy(
-    target_half_spread_bps=5.0,
-    quote_size=0.1,
-    skew_coeff=2.0,          # Inventory skew
-    inventory_limit=1.0,
-    vol_adaptive=True
+# Configure latency with jitter
+md_latency = LatencyModel(
+    base_latency_ms=10,
+    jitter_ms=5,
+    jitter_type="uniform",
 )
 
-# Run backtest
-config = BacktestConfig(initial_cash=100000.0)
-engine = BacktestEngine(strategy, config)
-result = engine.run(iter(events))
-
-# Analyze results
-metrics = result.compute_metrics()
-equity_df = result.get_equity_curve()
+# Generate events with arrival times
+generator = ArrivalTimeGenerator(
+    market_data_latency=md_latency,
+    order_latency=LatencyModel(base_latency_ms=20),
+    reordering_window_ms=50,
+)
 ```
 
-### 4. Leakage Control
+### Label Construction
 
 ```python
-from crypto_mm_research.evaluation.leakage import (
-    validate_no_lookahead,
-    assert_no_overlap
+from crypto_mm_research.labels import LabelConstructor, LabelConfig
+
+# Construct future return labels (no lookahead)
+config = LabelConfig(
+    horizons=[1, 5, 10, 30],  # 1s, 5s, 10s, 30s
+    direction_threshold_bps=5.0,
 )
-from crypto_mm_research.evaluation.stability import walk_forward_split
+constructor = LabelConstructor(config)
+labels_df = constructor.construct_labels(mid_prices, timestamps)
+```
 
-# Validate no lookahead
-validate_no_lookahead(features, target, target_lag=timedelta(seconds=1))
+### Experiment Runner
 
-# Walk-forward validation
-for train_data, test_data in walk_forward_split(
-    data, n_splits=5, gap=timedelta(minutes=5)
-):
-    model.fit(train_data)
-    predictions = model.predict(test_data)
+```python
+from crypto_mm_research.experiments import ExperimentRunner, ExperimentConfig
+
+config = ExperimentConfig(
+    name="spread_optimization",
+    base_config={...},
+    parameter_grid={
+        "strategy.target_half_spread_bps": [3, 5, 7],
+        "strategy.skew_coeff": [0, 1, 2],
+    },
+)
+
+runner = ExperimentRunner(config, output_dir="outputs")
+summary = runner.run_all()
+top_runs = runner.get_top_runs(n=5, metric="sharpe_ratio")
+```
+
+### Risk Management
+
+```python
+from crypto_mm_research.risk import RiskManager, RiskConfig
+
+risk_config = RiskConfig(
+    max_position_absolute=10.0,
+    max_drawdown_pct=5.0,
+    drawdown_kill_switch=True,
+)
+risk_manager = RiskManager(risk_config)
+
+# Check before placing orders
+if not risk_manager.check_position_limit(position_size, notional, timestamp):
+    # Block order
+    pass
 ```
 
 ## 📊 Performance Metrics
 
-| Metric | Description |
-|--------|-------------|
-| **Total PnL** | Final equity - initial cash |
-| **Realized PnL** | Closed trades PnL net of fees |
-| **Sharpe Ratio** | Risk-adjusted return (annualized) |
-| **Max Drawdown** | Largest peak-to-trough decline |
-| **Spread Capture** | Estimated spread PnL vs actual |
-| **Inventory Metrics** | Avg, max, std of position |
-| **Fee/PnL Ratio** | Fees as fraction of gross PnL |
-| **Turnover** | Volume / capital |
+- **PnL Metrics**: Total, realized, unrealized, return %
+- **Trade Stats**: Fills, volume, avg size, queue position
+- **Spread Capture**: Estimated vs actual
+- **Adverse Selection**: t+H mid - fill mid
+- **Risk**: Sharpe, max drawdown, volatility
+- **Alignment**: Fill-to-mid alignment rate
 
 ## 🛡️ Design Principles
 
@@ -218,12 +207,24 @@ for train_data, test_data in walk_forward_split(
 All features use only information available at time `t`:
 
 ```python
-# Rolling features use shift(1) to exclude current value
+# Rolling features use shift(1)
 rolling_mean = df["price"].shift(1).rolling(window=20).mean()
 
-# Z-scores compute stats on past data only
-mean = np.mean(values[:-1])  # Exclude current
-std = np.std(values[:-1], ddof=1)
+# Labels are shifted forward
+labels = labels.shift(-1)  # Align with features at time t
+```
+
+### Event Time vs Arrival Time
+
+```python
+# Event time: When event occurred in market
+event_ts = book.timestamp
+
+# Arrival time: When event reaches our system
+arrival_ts = event_ts + latency + jitter
+
+# Engine processes by arrival_ts
+# Metrics computed using event_ts (no lookahead)
 ```
 
 ### Determinism
@@ -235,11 +236,12 @@ gen = SyntheticDataGenerator(random_seed=42)
 events = gen.generate_to_list(...)  # Always same data
 ```
 
-### Realistic Fill Model
+## 📚 Documentation
 
-- Bid fills if `bid >= best_ask` OR trade at/through price
-- Ask fills if `ask <= best_bid` OR trade at/through price
-- Maker fees applied to all fills
+- [EXECUTION_MODEL.md](docs/EXECUTION_MODEL.md) - Queue mechanics, latency, fills
+- [EXPERIMENTS.md](docs/EXPERIMENTS.md) - Batch experiments and reporting
+- [LEAKAGE_AND_STABILITY.md](docs/LEAKAGE_AND_STABILITY.md) - Preventing lookahead bias
+- [METRICS.md](docs/METRICS.md) - Precise metric definitions
 
 ## 🧪 Testing
 
@@ -251,7 +253,7 @@ make test
 pytest tests/ --cov=crypto_mm_research --cov-report=html
 
 # Run specific test file
-pytest tests/unit/test_backtest.py -v
+pytest tests/unit/test_execution.py -v
 ```
 
 ## 🔧 Development
@@ -260,28 +262,14 @@ pytest tests/unit/test_backtest.py -v
 # Format code
 make format
 
-# Run linting (ruff + mypy)
+# Run linting
 make lint
 
 # Run all checks
 make all
 ```
 
-## 📚 Documentation
-
-- [LEAKAGE_AND_STABILITY.md](docs/LEAKAGE_AND_STABILITY.md) - Guide to preventing lookahead bias
-- [METRICS.md](docs/METRICS.md) - Precise definitions of all metrics
-
-## 🎓 Research Applications
-
-1. **Market Making**: Test inventory skew, spread capture vs adverse selection
-2. **Microstructure**: Analyze order flow, book dynamics, price impact
-3. **Strategy Development**: Rapid prototyping with synthetic data
-4. **Risk Analysis**: Drawdown, regime performance, stability metrics
-
 ## 📖 Citation
-
-If you use this code in your research, please cite:
 
 ```bibtex
 @software{crypto_mm_research,
@@ -304,4 +292,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Disclaimer**: This software is for research and educational purposes only. It is not intended for live trading without extensive testing and validation. Past performance (even in backtests) does not guarantee future results.
+**Disclaimer**: This software is for research and educational purposes only. Past performance does not guarantee future results.

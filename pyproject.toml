@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crypto_mm_research"
-version = "0.1.0"
+version = "0.2.0"
 description = "Crypto Market Microstructure + Market Making Backtest Research"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,9 +12,9 @@ license = {text = "MIT"}
 authors = [
     {name = "Research Team"}
 ]
-keywords = ["crypto", "market-making", "backtest", "microstructure"]
+keywords = ["crypto", "market-making", "backtest", "microstructure", "execution"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -38,6 +38,7 @@ dev = [
 
 [project.scripts]
 crypto-mm-research = "crypto_mm_research.cli.run_backtest:main"
+crypto-mm-experiments = "crypto_mm_research.cli.run_experiments:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -47,36 +48,23 @@ include = ["crypto_mm_research*"]
 line-length = 100
 target-version = ['py311']
 include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
 
 [tool.ruff]
 target-version = "py311"
 line-length = 100
 select = [
-    "E",   # pycodestyle errors
-    "F",   # Pyflakes
-    "I",   # isort
-    "N",   # pep8-naming
-    "W",   # pycodestyle warnings
-    "UP",  # pyupgrade
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "SIM", # flake8-simplify
+    "E",
+    "F",
+    "I",
+    "N",
+    "W",
+    "UP",
+    "B",
+    "C4",
+    "SIM",
 ]
 ignore = [
-    "E501",  # Line too long (handled by black)
+    "E501",
 ]
 
 [tool.ruff.pydocstyle]
@@ -89,13 +77,6 @@ warn_unused_configs = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 check_untyped_defs = true
-disallow_untyped_decorators = false
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = false
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

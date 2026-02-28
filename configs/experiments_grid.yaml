@@ -1,0 +1,31 @@
+name: "mm_strategy_grid_search"
+
+base_config:
+  data:
+    symbol: "BTC-USDT"
+    duration_seconds: 1800
+    events_per_second: 10
+    start_price: 50000.0
+    tick_size: 0.1
+    volatility_annual: 0.8
+    target_spread_bps: 5.0
+    random_seed: 42
+  
+  strategy:
+    target_half_spread_bps: 5.0
+    quote_size: 0.1
+    skew_coeff: 1.0
+    inventory_limit: 1.0
+    vol_adaptive: false
+  
+  backtest:
+    initial_cash: 100000.0
+    maker_fee_rate: 0.0002
+    taker_fee_rate: 0.0005
+
+parameter_grid:
+  "strategy.target_half_spread_bps": [3.0, 5.0, 7.0]
+  "strategy.skew_coeff": [0.0, 1.0, 2.0]
+  "strategy.inventory_limit": [0.5, 1.0, 2.0]
+
+random_seed: 42
