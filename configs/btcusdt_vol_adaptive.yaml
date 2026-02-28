@@ -1,0 +1,32 @@
+# Volatility-adaptive market making configuration
+
+data:
+  symbol: "BTC-USDT"
+  duration_seconds: 7200  # 2 hours
+  events_per_second: 10
+  start_price: 50000.0
+  tick_size: 0.1
+  lot_size: 0.001
+  volatility_annual: 1.0  # Higher vol for this demo
+  target_spread_bps: 5.0
+  random_seed: 123
+
+strategy:
+  target_half_spread_bps: 5.0
+  quote_size: 0.1
+  skew_coeff: 3.0  # Stronger skew
+  inventory_limit: 2.0
+  vol_adaptive: true  # Enable vol-adaptive spread
+  vol_threshold: 0.0005
+  min_half_spread_bps: 3.0
+
+backtest:
+  initial_cash: 100000.0
+  maker_fee_rate: 0.0002
+  taker_fee_rate: 0.0005
+  record_interval_seconds: 1.0
+
+output:
+  save_equity_curve: true
+  save_fills: true
+  save_metrics: true

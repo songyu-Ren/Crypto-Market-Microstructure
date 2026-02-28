@@ -1,0 +1,36 @@
+# Demo configuration for BTC-USDT market making backtest
+
+# Data generation parameters
+data:
+  symbol: "BTC-USDT"
+  duration_seconds: 3600  # 1 hour of data
+  events_per_second: 10
+  start_price: 50000.0
+  tick_size: 0.1
+  lot_size: 0.001
+  volatility_annual: 0.8  # 80% annual vol
+  target_spread_bps: 5.0  # 5 bps target spread
+  random_seed: 42
+
+# Strategy parameters
+strategy:
+  target_half_spread_bps: 5.0  # Quote 5 bps from mid on each side
+  quote_size: 0.1  # Base order size
+  skew_coeff: 2.0  # Inventory skew coefficient
+  inventory_limit: 1.0  # Max position before stopping one side
+  vol_adaptive: false  # Disable vol-adaptive spread for demo
+  vol_threshold: 0.001
+  min_half_spread_bps: 2.0
+
+# Backtest parameters
+backtest:
+  initial_cash: 100000.0
+  maker_fee_rate: 0.0002  # 2 bps maker fee
+  taker_fee_rate: 0.0005  # 5 bps taker fee
+  record_interval_seconds: 1.0
+
+# Output configuration
+output:
+  save_equity_curve: true
+  save_fills: true
+  save_metrics: true
